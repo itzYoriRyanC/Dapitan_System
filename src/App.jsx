@@ -176,7 +176,7 @@ function App() {
           </h1>
 
           <p className="intro-text">
-            Welcome to the Dapitan City Tourism experience.
+            Discover Dapitan City experience.
             Before proceeding, please read the challenge
             mechanics.
           </p>
@@ -2380,7 +2380,7 @@ function Survey({
 
           <p>
             Your response has been recorded. Thank you for
-            participating in the Dapitan City tourism
+            participating in the Discover Dapitan City 
             experience.
           </p>
 
