@@ -896,7 +896,7 @@ function ExperiencePage({
 <section className="content-section about-dapitan-section">
 
   <p className="section-label">
-    ABOUT DAPITAN CITY
+    📌ABOUT DAPITAN CITY
   </p>
 
   <h2>
