@@ -4,6 +4,12 @@ import "./App.css";
 import { getSurvey } from "./firebase/surveys";
 import { submitSurvey } from "./firebase/responses";
 
+import {
+  recordVisit,
+  getAnalyticsVisits,
+  getUniqueVisitors,
+} from "./firebase/analytics";
+
 /* =========================================================
    DESTINATIONS
 ========================================================= */
@@ -14,7 +20,7 @@ const DESTINATIONS = [
     id: "rizal-shrine-visitor-center",
     title: "Rizal Shrine Visitor Center",
     description:
-      "Begin your journey at the visitor center and learn about the historical significance of the Rizal Shrine.",
+      "📍Barangay Talisay, Dapitan City",
     image: "/Rizal_Shrine.jpg",
   },
   {
@@ -22,7 +28,7 @@ const DESTINATIONS = [
     id: "rizal-casa-cuadrada",
     title: "Rizal Casa Cuadrada",
     description:
-      "Discover one of the historic structures connected to the life of Dr. Jose Rizal during his exile in Dapitan.",
+      "📍Barangay Talisay, Dapitan City",
     image: "/Casa_Cuadrada.jpg",
   },
   {
@@ -30,7 +36,7 @@ const DESTINATIONS = [
     id: "casa-residencia-rizal-shrine",
     title: "Casa Residencia Rizal Shrine",
     description:
-      "Explore the Casa Residencia and the historical stories preserved within the Rizal Shrine complex.",
+      "📍Barangay Talisay, Dapitan City",
     image: "/casa_residencia.jpg",
   },
   {
@@ -38,7 +44,7 @@ const DESTINATIONS = [
     id: "dapitan-city-plaza",
     title: "Dapitan City Plaza",
     description:
-      "Experience the heart of the city and its role in the community's everyday life.",
+      "📍Justice Florentino Saguin St. Dapitan City, Zamboanga del Norte.",
     image: "/Dapitan_City_Plaza.jpg",
   },
   {
@@ -46,7 +52,7 @@ const DESTINATIONS = [
     id: "relief-map",
     title: "Relief Map",
     description:
-      "See Dapitan from another perspective through the historic relief map.",
+      "📍Justice Florentino Saguin St. Dapitan City, Zamboanga del Norte.",
     image: "/Relief_Map.jpg",
   },
   {
@@ -54,8 +60,32 @@ const DESTINATIONS = [
     id: "balay-hamoy-museum",
     title: "Balay Hamoy Museum",
     description:
-      "Discover local heritage, stories, and cultural memories preserved at Balay Hamoy Museum.",
+      "📍143 M1 Retro Street, Dapitan City.",
     image: "/Balay_Hamoy.jpg",
+  },
+  {
+    number: "07",
+    id: "punto-del-desembarco",
+    title: "Punto del Desembarco",
+    description:
+      "📍Sunset Boulevard, Dapitan City.",
+    image: "/Rizal_Gwapo.jpg",
+  },
+  {
+    number: "08",
+    id: "Aniano Adasa Ancestral House",
+    title: "Aniano Adasa Ancestral House",
+    description:
+      "📍Josephine Bracken Street, Dapitan City.",
+    image: "/Aniano.jpg",
+  },
+  {
+    number: "09",
+    id: "ST. James the Greater Parish Church",
+    title: "ST. James the Greater Parish Church",
+    description:
+      "📍Justice Florentino Saguin St. Dapitan City, Zamboanga del Norte.",
+    image: "/ST.JAMES.jpg",
   },
 ];
 
@@ -64,7 +94,7 @@ const DESTINATIONS = [
 ========================================================= */
 
 const FACEBOOK_PAGE_URL =
-  "https://www.facebook.com/djshajda";
+  "https://www.facebook.com/profile.php?id=61593956825123&rdid=ixx95FXiiUmm6195&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1DoWju6Qhk%2F#";
 
 const REQUIRED_HASHTAG = "#DapitanChallenge";
 
@@ -85,36 +115,69 @@ function App() {
   const [surveyLoading, setSurveyLoading] = useState(true);
   const [surveyError, setSurveyError] = useState(null);
 
+  const [showAnalytics, setShowAnalytics] =
+    useState(false);
+
+  /* =======================================================
+     LOAD SURVEY + ONLINE STATUS
+  ======================================================= */
+
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
 
     loadSurvey();
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
     };
   }, []);
+
+  /* =======================================================
+     LOAD SURVEY
+  ======================================================= */
 
   const loadSurvey = async () => {
     try {
       setSurveyLoading(true);
       setSurveyError(null);
 
-      const data = await getSurvey("dapitan-main");
+      const data =
+        await getSurvey("dapitan-main");
 
-      console.log("Survey loaded:", data);
+      console.log(
+        "Survey loaded:",
+        data
+      );
 
       setSurvey(data);
     } catch (error) {
-      console.error("Failed to load survey:", error);
+      console.error(
+        "Failed to load survey:",
+        error
+      );
 
       setSurveyError(
-        error?.message || "Unable to load survey."
+        error?.message ||
+          "Unable to load survey."
       );
     } finally {
       setSurveyLoading(false);
@@ -138,13 +201,40 @@ function App() {
      MECHANICS → EXPERIENCE
   ======================================================= */
 
-  const startExperience = () => {
-    setScreen(isOnline ? "online" : "offline");
+  const startExperience = async () => {
+    const nextScreen =
+      isOnline
+        ? "online"
+        : "offline";
+
+    setScreen(nextScreen);
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
+
+    /* =====================================================
+       RECORD ANALYTICS VISIT
+
+       Only record visits when online.
+       recordVisit() is protected with try/catch so
+       analytics never prevents the actual app from opening.
+    ===================================================== */
+
+    if (isOnline) {
+      try {
+        await recordVisit();
+        console.log(
+          "Analytics visit recorded."
+        );
+      } catch (error) {
+        console.error(
+          "Failed to record analytics visit:",
+          error
+        );
+      }
+    }
   };
 
   /* =======================================================
@@ -157,8 +247,8 @@ function App() {
         <section className="warning-screen">
 
           <div className="brand">
-            DAPITAN
-            <span>CITY TOURISM</span>
+            Discover
+            <span>Dapitan</span>
           </div>
 
           <div className="warning-icon">
@@ -177,26 +267,31 @@ function App() {
 
           <p className="intro-text">
             Discover Dapitan City experience.
-            Before proceeding, please read the challenge
-            mechanics.
+            Before proceeding, please read the
+            challenge mechanics.
           </p>
 
           <div className="warning-message">
+
             <strong>
               ⚠ Important Notice
             </strong>
 
             <p>
-              This experience contains interactive activities,
-              photo proof requirements, Facebook verification,
-              and survey questions.
+              This experience contains interactive
+              activities, photo proof requirements,
+              Facebook verification, and survey
+              questions.
             </p>
+
           </div>
 
           <button
             type="button"
             className="primary-button"
-            onClick={continueToExperience}
+            onClick={
+              continueToExperience
+            }
           >
             YES, PROCEED
           </button>
@@ -204,12 +299,15 @@ function App() {
           <button
             type="button"
             className="secondary-button"
-            onClick={() => setScreen("exit")}
+            onClick={() =>
+              setScreen("exit")
+            }
           >
             NO, EXIT
           </button>
 
           <div className="live-status">
+
             <span
               className={
                 isOnline
@@ -221,6 +319,7 @@ function App() {
             {isOnline
               ? "Online experience available"
               : "Offline mode available"}
+
           </div>
 
         </section>
@@ -246,14 +345,16 @@ function App() {
           </h1>
 
           <p>
-            You have chosen not to continue with the
-            tourism challenge.
+            You have chosen not to continue
+            with the tourism challenge.
           </p>
 
           <button
             type="button"
             className="primary-button"
-            onClick={() => setScreen("warning")}
+            onClick={() =>
+              setScreen("warning")
+            }
           >
             GO BACK
           </button>
@@ -264,12 +365,27 @@ function App() {
   }
 
   /* =======================================================
+     ANALYTICS PAGE
+  ======================================================= */
+
+  if (showAnalytics) {
+    return (
+      <AnalyticsDashboard
+        onBack={() =>
+          setShowAnalytics(false)
+        }
+      />
+    );
+  }
+
+  /* =======================================================
      MECHANICS
   ======================================================= */
 
   if (screen === "mechanics") {
     return (
       <main className="app">
+
         <section className="mechanics-screen">
 
           <p className="section-label">
@@ -283,88 +399,123 @@ function App() {
           </h1>
 
           <p className="intro-text">
-            Choose one destination, complete the selfie
-            challenge, publish your proof on Facebook, then
-            submit the required screenshot before taking the
-            survey.
+            Choose one destination, complete
+            the selfie challenge, publish your
+            proof on Facebook, then submit the
+            required screenshot before taking
+            the survey.
           </p>
 
           <div className="mechanic-list">
 
             <div className="mechanic">
-              <span>01</span>
+
+              <span>
+                01
+              </span>
 
               <div>
+
                 <strong>
                   Choose
                 </strong>
 
                 <p>
-                  Select exactly one tourist destination from
-                  the six available locations.
+                  Select exactly one tourist
+                  destination from the available
+                  locations.
                 </p>
+
               </div>
+
             </div>
 
             <div className="mechanic">
-              <span>02</span>
+
+              <span>
+                02
+              </span>
 
               <div>
+
                 <strong>
-                  Take 3 Selfies
+                  Take 1 Selfie
                 </strong>
 
                 <p>
-                  Take three different selfies at three
-                  different spots within your chosen
-                  destination.
+                  Take one clear selfie at your
+                  chosen destination showing your
+                  face and the tourist attraction
+                  or recognizable background.
                 </p>
+
               </div>
+
             </div>
 
             <div className="mechanic">
-              <span>03</span>
+
+              <span>
+                03
+              </span>
 
               <div>
+
                 <strong>
                   Post Your Proof
                 </strong>
 
                 <p>
-                  Follow the Facebook challenge instructions
-                  and make sure the required hashtag is visible.
+                  Follow the Facebook challenge
+                  instructions and make sure the
+                  required hashtag is visible.
                 </p>
+
               </div>
+
             </div>
 
             <div className="mechanic">
-              <span>04</span>
+
+              <span>
+                04
+              </span>
 
               <div>
+
                 <strong>
                   Submit Screenshot
                 </strong>
 
                 <p>
-                  Upload a screenshot showing your Facebook
-                  proof and required hashtag.
+                  Upload a screenshot showing
+                  your Facebook proof and required
+                  hashtag.
                 </p>
+
               </div>
+
             </div>
 
             <div className="mechanic">
-              <span>05</span>
+
+              <span>
+                05
+              </span>
 
               <div>
+
                 <strong>
                   Complete Survey
                 </strong>
 
                 <p>
-                  Once the challenge is completed, continue to
-                  the tourism survey.
+                  Once the challenge is completed,
+                  continue to the tourism survey.
                 </p>
+
               </div>
+
             </div>
 
           </div>
@@ -400,12 +551,15 @@ function App() {
           <button
             type="button"
             className="primary-button"
-            onClick={startExperience}
+            onClick={
+              startExperience
+            }
           >
             START CHALLENGE →
           </button>
 
         </section>
+
       </main>
     );
   }
@@ -417,20 +571,38 @@ function App() {
   if (screen === "offline") {
     return (
       <OfflineExperience
-        onBack={() => setScreen("warning")}
+        onBack={() =>
+          setScreen("warning")
+        }
         survey={survey}
-        surveyLoading={surveyLoading}
-        surveyError={surveyError}
+        surveyLoading={
+          surveyLoading
+        }
+        surveyError={
+          surveyError
+        }
+        onOpenAnalytics={() =>
+          setShowAnalytics(true)
+        }
       />
     );
   }
 
   return (
     <OnlineExperience
-      onBack={() => setScreen("warning")}
+      onBack={() =>
+        setScreen("warning")
+      }
       survey={survey}
-      surveyLoading={surveyLoading}
-      surveyError={surveyError}
+      surveyLoading={
+        surveyLoading
+      }
+      surveyError={
+        surveyError
+      }
+      onOpenAnalytics={() =>
+        setShowAnalytics(true)
+      }
     />
   );
 }
@@ -445,6 +617,7 @@ function ExperiencePage({
   surveyLoading,
   surveyError,
   mode,
+  onOpenAnalytics,
 }) {
   const [selectedDestination, setSelectedDestination] =
     useState(null);
@@ -452,7 +625,8 @@ function ExperiencePage({
   const [showChallenge, setShowChallenge] =
     useState(false);
 
-  const [selfies, setSelfies] = useState([]);
+  const [selfies, setSelfies] =
+    useState([]);
 
   const [facebookProof, setFacebookProof] =
     useState(null);
@@ -463,85 +637,79 @@ function ExperiencePage({
   const [showSurvey, setShowSurvey] =
     useState(false);
 
-  const selectedDestinationRef = useRef(null);
-  const challengeRef = useRef(null);
+  const selectedDestinationRef =
+    useRef(null);
+
+  const challengeRef =
+    useRef(null);
 
   /* =======================================================
-     SELECT DESTINATION — B MECHANIC
+     SELECT DESTINATION
   ======================================================= */
 
-  const handleDestinationSelect = (destination) => {
-    /*
-     * If the user clicks the already selected card,
-     * don't unnecessarily reset the challenge.
-     */
-    const isSameDestination =
-      selectedDestination?.id === destination.id;
+  const handleDestinationSelect =
+    (destination) => {
 
-    if (isSameDestination) {
+      const isSameDestination =
+        selectedDestination?.id ===
+        destination.id;
+
+      if (isSameDestination) {
+
+        setTimeout(() => {
+
+          selectedDestinationRef.current
+            ?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+
+        }, 100);
+
+        return;
+      }
+
+      setSelectedDestination(
+        destination
+      );
+
+      setShowChallenge(false);
+      setSelfies([]);
+      setFacebookProof(null);
+      setChallengeComplete(false);
+      setShowSurvey(false);
+
       setTimeout(() => {
-        selectedDestinationRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }, 100);
 
-      return;
-    }
+        selectedDestinationRef.current
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
 
-    /*
-     * Select destination.
-     *
-     * The selected card receives:
-     *
-     * destination-card
-     * destination-card-selectable
-     * selected
-     *
-     * Your B CSS handles the visual animation.
-     */
-    setSelectedDestination(destination);
-
-    /*
-     * Reset challenge state whenever destination changes.
-     */
-    setShowChallenge(false);
-    setSelfies([]);
-    setFacebookProof(null);
-    setChallengeComplete(false);
-    setShowSurvey(false);
-
-    /*
-     * Allow React to render the selected state first,
-     * then scroll to the continuation panel.
-     */
-    setTimeout(() => {
-      selectedDestinationRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-    }, 180);
-  };
+      }, 180);
+    };
 
   /* =======================================================
      START SELFIE CHALLENGE
   ======================================================= */
 
   const handleStartChallenge = () => {
+
     if (!selectedDestination) {
       return;
     }
 
     setShowChallenge(true);
 
-    /*
-     * Wait for ChallengeFlow to render before scrolling.
-     */
     setTimeout(() => {
-      challengeRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+
+      challengeRef.current
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
     }, 180);
   };
 
@@ -549,36 +717,45 @@ function ExperiencePage({
      CHANGE DESTINATION
   ======================================================= */
 
-  const handleChangeDestination = () => {
-    setSelectedDestination(null);
-    setShowChallenge(false);
-    setSelfies([]);
-    setFacebookProof(null);
-    setChallengeComplete(false);
-    setShowSurvey(false);
+  const handleChangeDestination =
+    () => {
 
-    setTimeout(() => {
-      document
-        .getElementById("destination-selection")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-    }, 100);
-  };
+      setSelectedDestination(null);
+      setShowChallenge(false);
+      setSelfies([]);
+      setFacebookProof(null);
+      setChallengeComplete(false);
+      setShowSurvey(false);
+
+      setTimeout(() => {
+
+        document
+          .getElementById(
+            "destination-selection"
+          )
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+
+      }, 100);
+    };
 
   /* =======================================================
      BACK
   ======================================================= */
 
   const handleBack = () => {
+
     onBack();
 
     setTimeout(() => {
+
       window.scrollTo({
         top: 0,
         behavior: "smooth",
       });
+
     }, 50);
   };
 
@@ -592,10 +769,13 @@ function ExperiencePage({
             ? "ONLINE"
             : "OFFLINE"
         }
+        onOpenAnalytics={
+          onOpenAnalytics
+        }
       />
 
       {/* =================================================
-          HERO
+          MAIN HERO
       ================================================= */}
 
       {mode === "online" ? (
@@ -609,7 +789,7 @@ function ExperiencePage({
             poster="/Dapitan_City_Plaza.jpg"
           >
             <source
-              src="/media/dapitan-tourism.mp4"
+              src="/dapitan-tourism.mp4"
               type="video/mp4"
             />
           </video>
@@ -617,7 +797,7 @@ function ExperiencePage({
           <div className="video-overlay">
 
             <p className="section-label">
-              WELCOME TO
+              Dapit na sa 
             </p>
 
             <h1>
@@ -627,7 +807,7 @@ function ExperiencePage({
             </h1>
 
             <p>
-              Discover. Explore. Experience.
+              Dapitan Always Inviting!
             </p>
 
           </div>
@@ -654,9 +834,57 @@ function ExperiencePage({
             </h1>
 
             <p>
-              Explore the heritage, landmarks, and stories
-              of Dapitan City.
+              Explore the heritage, landmarks,
+              and stories of Dapitan City.
             </p>
+
+          </div>
+
+        </section>
+      )}
+
+      {/* =================================================
+          VIDEO PRESENTATION
+      ================================================= */}
+
+      {mode === "online" && (
+        <section className="video-presentation-section">
+
+          <div className="video-presentation-content">
+
+            <p className="section-label">
+              DISCOVER DAPITAN
+            </p>
+
+            <h2>
+              A CITY OF HERITAGE
+            </h2>
+
+            <p className="video-presentation-description">
+              Explore the rich
+              heritage, and Diverse culture of Dapitan City.
+              Take a walk down memory lane and uncover the colorful history of our national hero, Dr. Jose Rizal and his works
+            </p>
+
+            <div className="video-presentation-player">
+
+              <video
+                controls
+                playsInline
+                preload="metadata"
+                poster="/Dapitan_City_Plaza.jpg"
+              >
+                <source
+                  src="/DiscoverDapitan_Video.mp4"
+                  type="video/mp4"
+                />
+
+                Your browser does not support
+                the video tag.
+
+              </video>
+
+            </div>
 
           </div>
 
@@ -685,14 +913,18 @@ function ExperiencePage({
         </h2>
 
         <p className="large-text">
-          Select exactly one destination below. Your chosen
-          destination becomes the location for your three-selfie
-          challenge.
+          Select exactly one destination below.
+          Your chosen destination becomes the
+          location for your one-selfie challenge.
         </p>
 
         <DestinationSelector
-          selectedDestination={selectedDestination}
-          onSelect={handleDestinationSelect}
+          selectedDestination={
+            selectedDestination
+          }
+          onSelect={
+            handleDestinationSelect
+          }
         />
 
         {/* =================================================
@@ -707,7 +939,8 @@ function ExperiencePage({
             </strong>
 
             <span>
-              Click or tap one destination above to begin.
+              Click or tap one destination above
+              to begin.
             </span>
 
           </div>
@@ -717,99 +950,138 @@ function ExperiencePage({
             SELECTED DESTINATION
         ================================================= */}
 
-        {selectedDestination && !showChallenge && (
-          <div
-            className="selected-destination-box"
-            ref={selectedDestinationRef}
-          >
-
-            <div className="selected-check">
-              ✓
-            </div>
-
-            <p className="section-label">
-              DESTINATION SELECTED
-            </p>
-
-            <h3>
-              {selectedDestination.title}
-            </h3>
-
-            <p>
-              Your challenge will be completed at this
-              destination. You must submit three different
-              selfies showing your face and the selected
-              tourist attraction or recognizable background.
-            </p>
-
-            <div className="selection-meta">
-
-              <span>
-                DESTINATION {selectedDestination.number}
-              </span>
-
-              <span>
-                3 SELFIES REQUIRED
-              </span>
-
-            </div>
-
-            <button
-              type="button"
-              className="primary-button"
-              onClick={handleStartChallenge}
+        {selectedDestination &&
+          !showChallenge && (
+            <div
+              className="selected-destination-box"
+              ref={
+                selectedDestinationRef
+              }
             >
-              CONTINUE TO SELFIE CHALLENGE →
-            </button>
 
-          </div>
-        )}
+              <div className="selected-check">
+                ✓
+              </div>
+
+              <p className="section-label">
+                DESTINATION SELECTED
+              </p>
+
+              <h3>
+                {
+                  selectedDestination.title
+                }
+              </h3>
+
+              <p>
+                Your challenge will be completed
+                at this destination. You must
+                submit one clear selfie showing
+                your face and the selected tourist
+                attraction or recognizable
+                background.
+              </p>
+
+              <div className="selection-meta">
+
+                <span>
+                  DESTINATION{" "}
+                  {
+                    selectedDestination.number
+                  }
+                </span>
+
+                <span>
+                  1 SELFIE REQUIRED
+                </span>
+
+              </div>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={
+                  handleStartChallenge
+                }
+              >
+                CONTINUE TO SELFIE
+                CHALLENGE →
+              </button>
+
+            </div>
+          )}
 
         {/* =================================================
             CHALLENGE
         ================================================= */}
 
-        {showChallenge && selectedDestination && (
-          <div ref={challengeRef}>
+        {showChallenge &&
+          selectedDestination && (
+            <div
+              ref={challengeRef}
+            >
 
-            <ChallengeFlow
-              destination={selectedDestination}
-              selfies={selfies}
-              setSelfies={setSelfies}
-              facebookProof={facebookProof}
-              setFacebookProof={setFacebookProof}
-              challengeComplete={challengeComplete}
-              setChallengeComplete={setChallengeComplete}
-              onChangeDestination={handleChangeDestination}
-              canUseFacebook={mode === "online"}
-            />
+              <ChallengeFlow
+                destination={
+                  selectedDestination
+                }
+                selfies={selfies}
+                setSelfies={
+                  setSelfies
+                }
+                facebookProof={
+                  facebookProof
+                }
+                setFacebookProof={
+                  setFacebookProof
+                }
+                challengeComplete={
+                  challengeComplete
+                }
+                setChallengeComplete={
+                  setChallengeComplete
+                }
+                onChangeDestination={
+                  handleChangeDestination
+                }
+                canUseFacebook={
+                  mode === "online"
+                }
+              />
 
-          </div>
-        )}
+            </div>
+          )}
 
         {/* =================================================
             SURVEY CTA
         ================================================= */}
 
-        {challengeComplete && !showSurvey && (
-          <SurveyCallout
-            title="Challenge Complete"
-            description="Your destination challenge has been completed. Continue to the tourism survey."
-            label="FINAL STEP"
-            onClick={() => {
-              setShowSurvey(true);
+        {challengeComplete &&
+          !showSurvey && (
+            <SurveyCallout
+              title="Challenge Complete"
+              description="Your destination challenge has been completed. Continue to the tourism survey."
+              label="FINAL STEP"
+              onClick={() => {
 
-              setTimeout(() => {
-                document
-                  .getElementById("survey-modal")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                  });
-              }, 150);
-            }}
-          />
-        )}
+                setShowSurvey(true);
+
+                setTimeout(() => {
+
+                  document
+                    .getElementById(
+                      "survey-modal"
+                    )
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    });
+
+                }, 150);
+
+              }}
+            />
+          )}
 
       </section>
 
@@ -820,10 +1092,16 @@ function ExperiencePage({
       {showSurvey && (
         <Survey
           survey={survey}
-          surveyLoading={surveyLoading}
-          surveyError={surveyError}
+          surveyLoading={
+            surveyLoading
+          }
+          surveyError={
+            surveyError
+          }
           mode={mode}
-          onClose={() => setShowSurvey(false)}
+          onClose={() =>
+            setShowSurvey(false)
+          }
         />
       )}
 
@@ -864,6 +1142,7 @@ function OfflineExperience(props) {
 function TourismHeader({
   onBack,
   status,
+  onOpenAnalytics,
 }) {
   return (
     <header className="tourism-header">
@@ -878,28 +1157,804 @@ function TourismHeader({
       </button>
 
       <div className="header-brand">
-        DAPITAN
-        <span>CITY TOURISM</span>
+        Discover
+        <span>
+          Dapitan
+        </span>
       </div>
 
-      <span
-        className={
-          status === "ONLINE"
-            ? "online-badge"
-            : "offline-badge"
-        }
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
       >
-        {status}
-      </span>
+
+        {status === "ONLINE" && (
+          <button
+            type="button"
+            onClick={
+              onOpenAnalytics
+            }
+            title="Analytics"
+            aria-label="Open analytics"
+            style={{
+              border: "0",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "6px",
+              color: "#201b16",
+            }}
+          >
+            📊
+          </button>
+        )}
+
+        <span
+          className={
+            status === "ONLINE"
+              ? "online-badge"
+              : "offline-badge"
+          }
+        >
+          {status}
+        </span>
+
+      </div>
 
     </header>
   );
 }
 
 /* =========================================================
+   ANALYTICS DASHBOARD
+========================================================= */
+
+function AnalyticsDashboard({
+  onBack,
+}) {
+  const [visits, setVisits] =
+    useState([]);
+
+  const [uniqueVisitors, setUniqueVisitors] =
+    useState(0);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  /* =======================================================
+     LOAD ANALYTICS
+  ======================================================= */
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [
+        visitData,
+        uniqueData,
+      ] = await Promise.all([
+        getAnalyticsVisits(),
+        getUniqueVisitors(),
+      ]);
+
+      console.log(
+        "Analytics visits:",
+        visitData
+      );
+
+      console.log(
+        "Unique visitors:",
+        uniqueData
+      );
+
+      setVisits(
+        Array.isArray(visitData)
+          ? visitData
+          : []
+      );
+
+      setUniqueVisitors(
+        Number(uniqueData) || 0
+      );
+    } catch (analyticsError) {
+      console.error(
+        "Analytics failed:",
+        analyticsError
+      );
+
+      setError(
+        analyticsError?.message ||
+          "Unable to load analytics."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* =======================================================
+     NORMALIZE VISIT DATA
+  ======================================================= */
+
+  const normalizedVisits =
+    visits
+      .map((visit) => {
+
+        let date = null;
+
+        if (
+          visit?.date instanceof Date
+        ) {
+          date = visit.date;
+        } else if (
+          visit?.timestamp?.toDate
+        ) {
+          date =
+            visit.timestamp.toDate();
+        } else if (
+          visit?.createdAt?.toDate
+        ) {
+          date =
+            visit.createdAt.toDate();
+        } else if (
+          visit?.timestamp
+        ) {
+          date = new Date(
+            visit.timestamp
+          );
+        } else if (
+          visit?.createdAt
+        ) {
+          date = new Date(
+            visit.createdAt
+          );
+        } else if (
+          visit?.date
+        ) {
+          date = new Date(
+            visit.date
+          );
+        }
+
+        return {
+          ...visit,
+          parsedDate:
+            date &&
+            !Number.isNaN(
+              date.getTime()
+            )
+              ? date
+              : null,
+        };
+      })
+      .filter(
+        (visit) =>
+          visit.parsedDate
+      )
+      .sort(
+        (a, b) =>
+          a.parsedDate -
+          b.parsedDate
+      );
+
+  /* =======================================================
+     GROUP VISITS BY DATE
+  ======================================================= */
+
+  const visitsByDate = {};
+
+  normalizedVisits.forEach(
+    (visit) => {
+
+      const key =
+        visit.parsedDate
+          .toISOString()
+          .slice(0, 10);
+
+      visitsByDate[key] =
+        (visitsByDate[key] || 0) + 1;
+    }
+  );
+
+  const graphData =
+    Object.entries(
+      visitsByDate
+    ).slice(-14);
+
+  const graphMax =
+    Math.max(
+      1,
+      ...graphData.map(
+        ([, value]) =>
+          value
+      )
+    );
+
+  /* =======================================================
+     SUBMISSION COUNT
+
+     Your response documents are the submitted
+     survey responses. We count successful analytics
+     records only from the data returned by the
+     analytics module when it exposes a submission
+     count.
+
+     Otherwise, use survey submissions if the
+     analytics.js result contains them.
+  ======================================================= */
+
+  const submissionCount =
+    visits.reduce(
+      (count, visit) => {
+
+        if (
+          visit?.type ===
+            "survey" ||
+          visit?.event ===
+            "survey_submission" ||
+          visit?.eventType ===
+            "survey_submission"
+        ) {
+          return count + 1;
+        }
+
+        return count;
+      },
+      0
+    );
+
+  return (
+    <main className="app">
+
+      <section
+        className="mechanics-screen"
+        style={{
+          maxWidth: "1000px",
+          width: "100%",
+        }}
+      >
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div
+          style={{
+            width: "100%",
+          }}
+        >
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onBack}
+            style={{
+              width: "auto",
+              minWidth: "120px",
+              padding:
+                "0 18px",
+              marginBottom:
+                "30px",
+            }}
+          >
+            ← BACK
+          </button>
+
+          <p className="section-label">
+            ANALYTICS
+          </p>
+
+          <h1>
+            Tourism
+            <br />
+            Dashboard
+          </h1>
+
+          <p className="intro-text">
+            Overview of visitors,
+            app usage, and survey
+            activity.
+          </p>
+
+        </div>
+
+        {/* =================================================
+            LOADING
+        ================================================= */}
+
+        {loading && (
+          <div
+            className="mode-preview"
+            style={{
+              width: "100%",
+            }}
+          >
+            <strong>
+              LOADING ANALYTICS...
+            </strong>
+          </div>
+        )}
+
+        {/* =================================================
+            ERROR
+        ================================================= */}
+
+        {error && (
+          <div
+            className="warning-message"
+            style={{
+              width: "100%",
+            }}
+          >
+
+            <strong>
+              ⚠ Analytics unavailable
+            </strong>
+
+            <p>
+              {error}
+            </p>
+
+            <button
+              type="button"
+              className="primary-button"
+              onClick={
+                loadAnalytics
+              }
+              style={{
+                marginTop: "15px",
+              }}
+            >
+              TRY AGAIN
+            </button>
+
+          </div>
+        )}
+
+        {!loading &&
+          !error && (
+            <>
+              {/* =========================================
+                  STAT CARDS
+              ========================================= */}
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "16px",
+                  width: "100%",
+                  margin:
+                    "20px 0 30px",
+                }}
+              >
+
+                {/* CARD 1 */}
+
+                <div
+                  style={{
+                    padding: "24px",
+                    background:
+                      "#201b16",
+                    color: "#fff",
+                    minHeight:
+                      "150px",
+                  }}
+                >
+
+                  <p
+                    className="section-label"
+                    style={{
+                      marginBottom:
+                        "12px",
+                    }}
+                  >
+                    SURVEY
+                  </p>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+                      fontFamily:
+                        "Georgia, serif",
+                      fontSize:
+                        "48px",
+                      fontWeight:
+                        "500",
+                    }}
+                  >
+                    {submissionCount}
+                  </strong>
+
+                  <p
+                    style={{
+                      color:
+                        "#aaa39a",
+                      margin:
+                        "8px 0 0",
+                    }}
+                  >
+                    People submitted
+                  </p>
+
+                </div>
+
+                {/* CARD 2 */}
+
+                <div
+                  style={{
+                    padding: "24px",
+                    background:
+                      "#201b16",
+                    color: "#fff",
+                    minHeight:
+                      "150px",
+                  }}
+                >
+
+                  <p
+                    className="section-label"
+                    style={{
+                      marginBottom:
+                        "12px",
+                    }}
+                  >
+                    APP USAGE
+                  </p>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+                      fontFamily:
+                        "Georgia, serif",
+                      fontSize:
+                        "48px",
+                      fontWeight:
+                        "500",
+                    }}
+                  >
+                    {visits.length}
+                  </strong>
+
+                  <p
+                    style={{
+                      color:
+                        "#aaa39a",
+                      margin:
+                        "8px 0 0",
+                    }}
+                  >
+                    Scans / URL visits
+                  </p>
+
+                </div>
+
+                {/* CARD 3 */}
+
+                <div
+                  style={{
+                    padding: "24px",
+                    background:
+                      "#b8975a",
+                    color:
+                      "#17130f",
+                    minHeight:
+                      "150px",
+                  }}
+                >
+
+                  <p
+                    style={{
+                      margin:
+                        "0 0 12px",
+                      fontSize:
+                        "10px",
+                      fontWeight:
+                        "800",
+                      letterSpacing:
+                        "3px",
+                    }}
+                  >
+                    UNIQUE
+                  </p>
+
+                  <strong
+                    style={{
+                      display:
+                        "block",
+                      fontFamily:
+                        "Georgia, serif",
+                      fontSize:
+                        "48px",
+                      fontWeight:
+                        "500",
+                    }}
+                  >
+                    {
+                      uniqueVisitors
+                    }
+                  </strong>
+
+                  <p
+                    style={{
+                      margin:
+                        "8px 0 0",
+                      opacity:
+                        "0.7",
+                    }}
+                  >
+                    Unique visitors
+                  </p>
+
+                </div>
+
+              </div>
+
+              {/* =========================================
+                  VISIT GRAPH
+              ========================================= */}
+
+              <div
+                style={{
+                  width: "100%",
+                  padding: "24px",
+                  background:
+                    "#fff",
+                  border:
+                    "1px solid #d3cabc",
+                }}
+              >
+
+                <p className="section-label">
+                  VISITS
+                </p>
+
+                <h2
+                  style={{
+                    margin:
+                      "0 0 8px",
+                    fontFamily:
+                      "Georgia, serif",
+                    fontSize:
+                      "32px",
+                    fontWeight:
+                      "500",
+                  }}
+                >
+                  People Visiting
+                  the App
+                </h2>
+
+                <p
+                  style={{
+                    color:
+                      "#71695f",
+                    fontSize:
+                      "13px",
+                    margin:
+                      "0 0 30px",
+                  }}
+                >
+                  Daily app visits from
+                  the latest recorded
+                  activity.
+                </p>
+
+                {graphData.length ===
+                0 ? (
+                  <div
+                    style={{
+                      minHeight:
+                        "250px",
+                      display:
+                        "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      border:
+                        "1px dashed #d3cabc",
+                      color:
+                        "#81796e",
+                      textAlign:
+                        "center",
+                      padding:
+                        "20px",
+                    }}
+                  >
+                    No visit data
+                    available yet.
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display:
+                        "flex",
+                      alignItems:
+                        "flex-end",
+                      gap: "10px",
+                      height:
+                        "260px",
+                      width:
+                        "100%",
+                      overflowX:
+                        "auto",
+                      padding:
+                        "20px 5px 0",
+                      borderBottom:
+                        "1px solid #d3cabc",
+                    }}
+                  >
+
+                    {graphData.map(
+                      (
+                        [
+                          date,
+                          value,
+                        ]
+                      ) => {
+
+                        const height =
+                          Math.max(
+                            8,
+                            (
+                              value /
+                              graphMax
+                            ) *
+                              200
+                          );
+
+                        const label =
+                          new Date(
+                            `${date}T00:00:00`
+                          ).toLocaleDateString(
+                            undefined,
+                            {
+                              month:
+                                "short",
+                              day:
+                                "numeric",
+                            }
+                          );
+
+                        return (
+                          <div
+                            key={date}
+                            style={{
+                              minWidth:
+                                "44px",
+                              height:
+                                "220px",
+                              display:
+                                "flex",
+                              flexDirection:
+                                "column",
+                              alignItems:
+                                "center",
+                              justifyContent:
+                                "flex-end",
+                              gap:
+                                "7px",
+                            }}
+                          >
+
+                            <span
+                              style={{
+                                fontSize:
+                                  "10px",
+                                fontWeight:
+                                  "800",
+                                color:
+                                  "#8d6d37",
+                              }}
+                            >
+                              {value}
+                            </span>
+
+                            <div
+                              style={{
+                                width:
+                                  "24px",
+                                height:
+                                  `${height}px`,
+                                background:
+                                  "#b8975a",
+                                minHeight:
+                                  "8px",
+                              }}
+                              title={`${value} visit${
+                                value === 1
+                                  ? ""
+                                  : "s"
+                              }`}
+                            />
+
+                            <span
+                              style={{
+                                fontSize:
+                                  "8px",
+                                color:
+                                  "#81796e",
+                                whiteSpace:
+                                  "nowrap",
+                                transform:
+                                  "rotate(-45deg)",
+                                transformOrigin:
+                                  "center",
+                                marginTop:
+                                  "8px",
+                              }}
+                            >
+                              {label}
+                            </span>
+
+                          </div>
+                        );
+                      }
+                    )}
+
+                  </div>
+                )}
+
+              </div>
+
+              {/* =========================================
+                  SUMMARY
+              ========================================= */}
+
+              <div
+                className="mode-preview"
+                style={{
+                  width: "100%",
+                  marginTop:
+                    "20px",
+                }}
+              >
+
+                <span className="status-dot online" />
+
+                <div>
+
+                  <strong>
+                    LIVE ANALYTICS
+                  </strong>
+
+                  <p>
+                    Analytics data is
+                    loaded directly from
+                    your Firebase
+                    analytics records.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </>
+          )}
+
+      </section>
+
+    </main>
+  );
+}
+
+/* =========================================================
    DESTINATION SELECTOR
-   B MECHANIC:
-   Selected card receives `.selected`
 ========================================================= */
 
 function DestinationSelector({
@@ -909,85 +1964,115 @@ function DestinationSelector({
   return (
     <div className="destination-selector">
 
-      {DESTINATIONS.map((destination) => {
+      {DESTINATIONS.map(
+        (destination) => {
 
-        const selected =
-          selectedDestination?.id === destination.id;
+          const selected =
+            selectedDestination?.id ===
+            destination.id;
 
-        return (
-          <button
-            key={destination.id}
-            type="button"
-            className={[
-              "destination-card",
-              "destination-card-selectable",
-              selected
-                ? "selected"
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={() => onSelect(destination)}
-            aria-pressed={selected}
-          >
+          return (
+            <button
+              key={
+                destination.id
+              }
+              type="button"
+              className={[
+                "destination-card",
+                "destination-card-selectable",
+                selected
+                  ? "selected"
+                  : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onClick={() =>
+                onSelect(
+                  destination
+                )
+              }
+              aria-pressed={
+                selected
+              }
+            >
 
-            <div className="destination-image">
+              <div className="destination-image">
 
-              <img
-                src={destination.image}
-                alt={destination.title}
-                loading="lazy"
-                onError={(event) => {
-                  console.error(
-                    "Image failed to load:",
+                <img
+                  src={
                     destination.image
-                  );
+                  }
+                  alt={
+                    destination.title
+                  }
+                  loading="lazy"
+                  onError={(
+                    event
+                  ) => {
 
-                  event.currentTarget.parentElement.classList.add(
-                    "image-error"
-                  );
-                }}
-              />
+                    console.error(
+                      "Image failed to load:",
+                      destination.image
+                    );
 
-              <span className="destination-number">
-                {destination.number}
-              </span>
+                    event
+                      .currentTarget
+                      .parentElement
+                      .classList.add(
+                        "image-error"
+                      );
+                  }}
+                />
 
-              {selected && (
-                <span className="destination-selected">
-                  ✓ SELECTED
+                <span className="destination-number">
+                  {
+                    destination.number
+                  }
                 </span>
-              )}
 
-            </div>
+                {selected && (
+                  <span className="destination-selected">
+                    ✓ SELECTED
+                  </span>
+                )}
 
-            <div className="destination-content">
+              </div>
 
-              <p className="card-number">
-                DESTINATION {destination.number}
-              </p>
+              <div className="destination-content">
 
-              <h3>
-                {destination.title}
-              </h3>
+                <p className="card-number">
+                  DESTINATION{" "}
+                  {
+                    destination.number
+                  }
+                </p>
 
-              <p>
-                {destination.description}
-              </p>
+                <h3>
+                  {
+                    destination.title
+                  }
+                </h3>
 
-              <span className="choose-destination">
+                <p>
+                  {
+                    destination.description
+                  }
+                </p>
 
-                {selected
-                  ? "DESTINATION SELECTED ✓"
-                  : "CHOOSE THIS DESTINATION →"}
+                <span className="choose-destination">
 
-              </span>
+                  {selected
+                    ? "DESTINATION SELECTED ✓"
+                    : "CHOOSE THIS DESTINATION →"}
 
-            </div>
+                </span>
 
-          </button>
-        );
-      })}
+              </div>
+
+            </button>
+          );
+        }
+      )}
 
     </div>
   );
@@ -1008,10 +2093,15 @@ function ChallengeFlow({
   onChangeDestination,
   canUseFacebook,
 }) {
-  const [activeStep, setActiveStep] = useState(1);
+  const [activeStep, setActiveStep] =
+    useState(1);
+
+  /* =======================================================
+     ONLY 1 SELFIE IS REQUIRED
+  ======================================================= */
 
   const selfieComplete =
-    selfies.length === 3;
+    selfies.length === 1;
 
   const facebookComplete =
     Boolean(facebookProof);
@@ -1020,230 +2110,306 @@ function ChallengeFlow({
      SELFIE UPLOAD
   ======================================================= */
 
-  const handleSelfieUpload = (event) => {
-    const files = Array.from(
-      event.target.files || []
-    );
+  const handleSelfieUpload =
+    (event) => {
 
-    if (!files.length) {
-      return;
-    }
+      const files =
+        Array.from(
+          event.target.files ||
+            []
+        );
 
-    const imageFiles = files.filter(
-      (file) =>
-        file.type &&
-        file.type.startsWith("image/")
-    );
+      if (!files.length) {
+        return;
+      }
 
-    if (!imageFiles.length) {
-      alert(
-        "Please select image files only."
-      );
+      const imageFiles =
+        files.filter(
+          (file) =>
+            file.type &&
+            file.type.startsWith(
+              "image/"
+            )
+        );
 
-      event.target.value = "";
-      return;
-    }
+      if (!imageFiles.length) {
 
-    const combined = [
-      ...selfies,
-      ...imageFiles,
-    ];
+        alert(
+          "Please select an image file only."
+        );
 
-    if (combined.length > 3) {
-      alert(
-        "Only 3 selfie proofs are required. The first 3 selected images will be used."
-      );
-    }
+        event.target.value =
+          "";
 
-    const nextSelfies =
-      combined.slice(0, 3);
+        return;
+      }
 
-    setSelfies(nextSelfies);
+      const nextSelfie =
+        imageFiles[0];
 
-    event.target.value = "";
+      setSelfies([
+        nextSelfie,
+      ]);
 
-    if (nextSelfies.length === 3) {
+      event.target.value =
+        "";
+
       setActiveStep(2);
 
       setTimeout(() => {
+
         document
-          .getElementById("facebook-proof")
+          .getElementById(
+            "facebook-proof"
+          )
           ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
+            behavior:
+              "smooth",
+            block:
+              "start",
           });
+
       }, 180);
-    }
-  };
+    };
 
   /* =======================================================
      REMOVE SELFIE
   ======================================================= */
 
-  const removeSelfie = (index) => {
-    setSelfies((previous) =>
-      previous.filter(
-        (_, currentIndex) =>
-          currentIndex !== index
-      )
-    );
+  const removeSelfie =
+    (index) => {
 
-    setActiveStep(1);
-    setChallengeComplete(false);
-  };
+      setSelfies(
+        (previous) =>
+          previous.filter(
+            (
+              _,
+              currentIndex
+            ) =>
+              currentIndex !==
+              index
+          )
+      );
+
+      setActiveStep(1);
+      setChallengeComplete(
+        false
+      );
+    };
 
   /* =======================================================
      FACEBOOK SCREENSHOT
   ======================================================= */
 
-  const handleFacebookProofUpload = (
-    event
-  ) => {
-    const file =
-      event.target.files?.[0];
+  const handleFacebookProofUpload =
+    (event) => {
 
-    if (!file) {
-      return;
-    }
+      const file =
+        event.target.files?.[0];
 
-    if (
-      !file.type ||
-      !file.type.startsWith("image/")
-    ) {
-      alert(
-        "Please upload a screenshot image."
+      if (!file) {
+        return;
+      }
+
+      if (
+        !file.type ||
+        !file.type.startsWith(
+          "image/"
+        )
+      ) {
+
+        alert(
+          "Please upload a screenshot image."
+        );
+
+        event.target.value =
+          "";
+
+        return;
+      }
+
+      setFacebookProof(
+        file
       );
 
-      event.target.value = "";
-      return;
-    }
+      event.target.value =
+        "";
 
-    setFacebookProof(file);
+      setActiveStep(3);
 
-    event.target.value = "";
+      setTimeout(() => {
 
-    setActiveStep(3);
+        document
+          .getElementById(
+            "facebook-final-check"
+          )
+          ?.scrollIntoView({
+            behavior:
+              "smooth",
+            block:
+              "center",
+          });
 
-    setTimeout(() => {
-      document
-        .getElementById("facebook-final-check")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-    }, 180);
-  };
+      }, 180);
+    };
 
   /* =======================================================
      FINISH CHALLENGE
   ======================================================= */
 
-  const finishChallenge = () => {
-    if (!selfieComplete) {
-      alert(
-        "Please upload exactly 3 different selfie proofs."
+  const finishChallenge =
+    () => {
+
+      if (!selfieComplete) {
+
+        alert(
+          "Please upload 1 selfie proof."
+        );
+
+        setActiveStep(1);
+
+        setTimeout(() => {
+
+          document
+            .getElementById(
+              "challenge"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "start",
+            });
+
+        }, 100);
+
+        return;
+      }
+
+      if (!facebookComplete) {
+
+        alert(
+          `Please upload a screenshot showing your Facebook proof and ${REQUIRED_HASHTAG}.`
+        );
+
+        setActiveStep(2);
+
+        setTimeout(() => {
+
+          document
+            .getElementById(
+              "facebook-proof"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "start",
+            });
+
+        }, 100);
+
+        return;
+      }
+
+      setChallengeComplete(
+        true
       );
 
-      setActiveStep(1);
-
       setTimeout(() => {
+
         document
-          .getElementById("challenge")
+          .getElementById(
+            "challenge-complete"
+          )
           ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
+            behavior:
+              "smooth",
+            block:
+              "center",
           });
-      }, 100);
 
-      return;
-    }
-
-    if (!facebookComplete) {
-      alert(
-        `Please upload a screenshot showing your Facebook proof and ${REQUIRED_HASHTAG}.`
-      );
-
-      setActiveStep(2);
-
-      setTimeout(() => {
-        document
-          .getElementById("facebook-proof")
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 100);
-
-      return;
-    }
-
-    setChallengeComplete(true);
-
-    setTimeout(() => {
-      document
-        .getElementById("challenge-complete")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-    }, 180);
-  };
+      }, 180);
+    };
 
   /* =======================================================
      STEP NAVIGATION
   ======================================================= */
 
-  const openStep = (step) => {
-    if (step === 1) {
-      setActiveStep(1);
+  const openStep =
+    (step) => {
 
-      setTimeout(() => {
-        document
-          .getElementById("challenge-selfies")
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 100);
+      if (step === 1) {
 
-      return;
-    }
+        setActiveStep(1);
 
-    if (
-      step === 2 &&
-      selfieComplete
-    ) {
-      setActiveStep(2);
+        setTimeout(() => {
 
-      setTimeout(() => {
-        document
-          .getElementById("facebook-proof")
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 100);
+          document
+            .getElementById(
+              "challenge-selfies"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "start",
+            });
 
-      return;
-    }
+        }, 100);
 
-    if (
-      step === 3 &&
-      selfieComplete &&
-      facebookComplete
-    ) {
-      setActiveStep(3);
+        return;
+      }
 
-      setTimeout(() => {
-        document
-          .getElementById("facebook-final-check")
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-      }, 100);
-    }
-  };
+      if (
+        step === 2 &&
+        selfieComplete
+      ) {
+
+        setActiveStep(2);
+
+        setTimeout(() => {
+
+          document
+            .getElementById(
+              "facebook-proof"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "start",
+            });
+
+        }, 100);
+
+        return;
+      }
+
+      if (
+        step === 3 &&
+        selfieComplete &&
+        facebookComplete
+      ) {
+
+        setActiveStep(3);
+
+        setTimeout(() => {
+
+          document
+            .getElementById(
+              "facebook-final-check"
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "center",
+            });
+
+        }, 100);
+      }
+    };
 
   return (
     <section
@@ -1266,14 +2432,17 @@ function ChallengeFlow({
         </h2>
 
         <p>
-          Complete every requirement below before proceeding
-          to the survey.
+          Complete every requirement
+          below before proceeding to
+          the survey.
         </p>
 
         <button
           type="button"
           className="change-destination-button"
-          onClick={onChangeDestination}
+          onClick={
+            onChangeDestination
+          }
         >
           ← CHANGE DESTINATION
         </button>
@@ -1288,27 +2457,47 @@ function ChallengeFlow({
 
         <ChallengeStep
           number="01"
-          title="Selfies"
-          active={activeStep === 1}
-          complete={selfieComplete}
-          onClick={() => openStep(1)}
+          title="Selfie"
+          active={
+            activeStep === 1
+          }
+          complete={
+            selfieComplete
+          }
+          onClick={() =>
+            openStep(1)
+          }
         />
 
         <ChallengeStep
           number="02"
           title="Facebook"
-          active={activeStep === 2}
-          complete={facebookComplete}
-          onClick={() => openStep(2)}
-          locked={!selfieComplete}
+          active={
+            activeStep === 2
+          }
+          complete={
+            facebookComplete
+          }
+          onClick={() =>
+            openStep(2)
+          }
+          locked={
+            !selfieComplete
+          }
         />
 
         <ChallengeStep
           number="03"
           title="Submit"
-          active={activeStep === 3}
-          complete={challengeComplete}
-          onClick={() => openStep(3)}
+          active={
+            activeStep === 3
+          }
+          complete={
+            challengeComplete
+          }
+          onClick={() =>
+            openStep(3)
+          }
           locked={
             !selfieComplete ||
             !facebookComplete
@@ -1318,7 +2507,7 @@ function ChallengeFlow({
       </div>
 
       {/* =================================================
-          STEP 1 — SELFIES
+          STEP 1
       ================================================= */}
 
       <div
@@ -1331,25 +2520,23 @@ function ChallengeFlow({
         </div>
 
         <h3>
-          Take 3 Different Selfies
+          Take 1 Selfie
         </h3>
 
         <p className="challenge-panel-intro">
-          Upload exactly three different selfies taken at
-          three different spots within your selected
-          destination.
+          Upload one clear selfie taken
+          at your selected destination.
         </p>
-
-        {/* REQUIRED */}
 
         <div className="required-notice">
 
           <strong>
-            📸 REQUIRED: 3 SELFIES
+            📸 REQUIRED: 1 SELFIE
           </strong>
 
           <span>
-            All three photos must be taken within:
+            Your photo must be taken
+            within:
           </span>
 
           <b>
@@ -1357,10 +2544,6 @@ function ChallengeFlow({
           </b>
 
         </div>
-
-        {/* =================================================
-            RULES
-        ================================================= */}
 
         <div className="rules-box">
 
@@ -1381,18 +2564,15 @@ function ChallengeFlow({
               </strong>
 
               <p>
-                Your face must be clearly visible.
+                Your face must be
+                clearly visible.
               </p>
 
               <p>
-                The selected tourist attraction or
-                recognizable background must also be clearly
-                visible.
-              </p>
-
-              <p>
-                Each selfie must come from a different spot
-                within the chosen destination.
+                The selected tourist
+                attraction or recognizable
+                background must also be
+                clearly visible.
               </p>
 
             </div>
@@ -1412,26 +2592,31 @@ function ChallengeFlow({
               </strong>
 
               <p>
-                Edited, manipulated, filtered, or altered
+                Edited, manipulated,
+                filtered, or altered
                 selfies.
               </p>
 
               <p>
-                Duplicate or identical selfies.
+                Duplicate or identical
+                selfies.
               </p>
 
               <p>
-                Unclear or blurry selfies.
+                Unclear or blurry
+                selfies.
               </p>
 
               <p>
-                Photos where the participant's face cannot
+                Photos where the
+                participant's face cannot
                 clearly be seen.
               </p>
 
               <p>
-                Photos that do not clearly show the selected
-                destination or its recognizable background.
+                Photos that do not clearly
+                show the selected destination
+                or recognizable background.
               </p>
 
             </div>
@@ -1440,52 +2625,54 @@ function ChallengeFlow({
 
         </div>
 
-        {/* =================================================
-            UPLOAD
-        ================================================= */}
+        {!selfieComplete && (
+          <label
+            className="upload-zone"
+            htmlFor="selfie-upload"
+          >
 
-        <label
-          className="upload-zone"
-          htmlFor="selfie-upload"
-        >
+            <span className="upload-icon">
+              +
+            </span>
 
-          <span className="upload-icon">
-            +
-          </span>
+            <strong>
+              ADD SELFIE PROOF
+            </strong>
 
-          <strong>
-            ADD SELFIE PROOFS
-          </strong>
+            <small>
+              Select 1 image file
+            </small>
 
-          <small>
-            Select up to 3 image files
-          </small>
+            <input
+              id="selfie-upload"
+              type="file"
+              accept="image/*"
+              onChange={
+                handleSelfieUpload
+              }
+            />
 
-          <input
-            id="selfie-upload"
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleSelfieUpload}
-          />
-
-        </label>
-
-        {/* =================================================
-            PREVIEWS
-        ================================================= */}
+          </label>
+        )}
 
         {selfies.length > 0 && (
           <div className="selfie-preview-grid">
 
             {selfies.map(
-              (file, index) => (
+              (
+                file,
+                index
+              ) => (
                 <SelfiePreview
                   key={`${file.name}-${file.lastModified}-${index}`}
                   file={file}
-                  index={index}
+                  index={
+                    index
+                  }
                   onRemove={() =>
-                    removeSelfie(index)
+                    removeSelfie(
+                      index
+                    )
                   }
                 />
               )
@@ -1493,10 +2680,6 @@ function ChallengeFlow({
 
           </div>
         )}
-
-        {/* =================================================
-            UPLOAD STATUS
-        ================================================= */}
 
         <div
           className={
@@ -1514,43 +2697,48 @@ function ChallengeFlow({
 
           <strong>
             {selfieComplete
-              ? "3 OF 3 SELFIES UPLOADED"
-              : `${selfies.length} OF 3 SELFIES UPLOADED`}
+              ? "1 OF 1 SELFIE UPLOADED"
+              : "0 OF 1 SELFIE UPLOADED"}
           </strong>
 
         </div>
-
-        {/* =================================================
-            CONTINUE
-        ================================================= */}
 
         {selfieComplete && (
           <button
             type="button"
             className="primary-button"
             onClick={() => {
-              setActiveStep(2);
+
+              setActiveStep(
+                2
+              );
 
               setTimeout(() => {
+
                 document
                   .getElementById(
                     "facebook-proof"
                   )
                   ?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
+                    behavior:
+                      "smooth",
+                    block:
+                      "start",
                   });
+
               }, 150);
+
             }}
           >
-            CONTINUE TO FACEBOOK PROOF →
+            CONTINUE TO FACEBOOK
+            PROOF →
           </button>
         )}
 
       </div>
 
       {/* =================================================
-          STEP 2 — FACEBOOK
+          STEP 2
       ================================================= */}
 
       {activeStep >= 2 && (
@@ -1568,14 +2756,12 @@ function ChallengeFlow({
           </h3>
 
           <p className="challenge-panel-intro">
-            Publish your challenge proof according to the
-            Facebook instructions, then upload a screenshot
-            showing your proof and the required hashtag.
+            Publish your challenge proof
+            according to the Facebook
+            instructions, then upload a
+            screenshot showing your proof
+            and required hashtag.
           </p>
-
-          {/* =================================================
-              FACEBOOK PAGE
-          ================================================= */}
 
           <div className="facebook-action-card">
 
@@ -1590,12 +2776,15 @@ function ChallengeFlow({
               </strong>
 
               <p>
-                Visit the Facebook page or challenge post
-                for the required posting instructions.
+                Visit the Facebook page or
+                challenge post for the
+                required posting instructions.
               </p>
 
               <a
-                href={FACEBOOK_PAGE_URL}
+                href={
+                  FACEBOOK_PAGE_URL
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="facebook-link"
@@ -1606,10 +2795,6 @@ function ChallengeFlow({
             </div>
 
           </div>
-
-          {/* =================================================
-              HASHTAG
-          ================================================= */}
 
           <div className="hashtag-box">
 
@@ -1622,15 +2807,12 @@ function ChallengeFlow({
             </strong>
 
             <p>
-              This hashtag must be clearly visible in the
-              screenshot you submit.
+              This hashtag must be clearly
+              visible in the screenshot you
+              submit.
             </p>
 
           </div>
-
-          {/* =================================================
-              FACEBOOK INSTRUCTIONS
-          ================================================= */}
 
           <div className="proof-checklist">
 
@@ -1640,7 +2822,8 @@ function ChallengeFlow({
               </span>
 
               <p>
-                Open the Facebook challenge page.
+                Open the Facebook challenge
+                page.
               </p>
             </div>
 
@@ -1650,8 +2833,8 @@ function ChallengeFlow({
               </span>
 
               <p>
-                Follow the required Facebook posting
-                instructions.
+                Follow the required Facebook
+                posting instructions.
               </p>
             </div>
 
@@ -1661,8 +2844,9 @@ function ChallengeFlow({
               </span>
 
               <p>
-                Make sure {REQUIRED_HASHTAG} is visible in
-                your Facebook proof.
+                Make sure {REQUIRED_HASHTAG}
+                is visible in your Facebook
+                proof.
               </p>
             </div>
 
@@ -1672,8 +2856,9 @@ function ChallengeFlow({
               </span>
 
               <p>
-                Take a clear screenshot showing the Facebook
-                proof and required hashtag.
+                Take a clear screenshot
+                showing the Facebook proof
+                and required hashtag.
               </p>
             </div>
 
@@ -1689,10 +2874,6 @@ function ChallengeFlow({
 
           </div>
 
-          {/* =================================================
-              OFFLINE
-          ================================================= */}
-
           {!canUseFacebook && (
             <div className="offline-proof-warning">
 
@@ -1701,18 +2882,15 @@ function ChallengeFlow({
               </strong>
 
               <p>
-                You are currently using offline mode. Your
-                selfie information can be prepared, but
-                Facebook posting and proof verification require
-                an internet connection.
+                You are currently using offline
+                mode. Your selfie information can
+                be prepared, but Facebook posting
+                and proof verification require an
+                internet connection.
               </p>
 
             </div>
           )}
-
-          {/* =================================================
-              SCREENSHOT UPLOAD
-          ================================================= */}
 
           <label
             className="upload-zone facebook-upload"
@@ -1743,24 +2921,28 @@ function ChallengeFlow({
 
           </label>
 
-          {/* =================================================
-              SCREENSHOT PREVIEW
-          ================================================= */}
-
           {facebookProof && (
             <ProofPreview
-              file={facebookProof}
+              file={
+                facebookProof
+              }
               onRemove={() => {
-                setFacebookProof(null);
-                setChallengeComplete(false);
-                setActiveStep(2);
+
+                setFacebookProof(
+                  null
+                );
+
+                setChallengeComplete(
+                  false
+                );
+
+                setActiveStep(
+                  2
+                );
+
               }}
             />
           )}
-
-          {/* =================================================
-              PROOF SUCCESS
-          ================================================= */}
 
           {facebookComplete && (
             <div className="proof-success">
@@ -1776,7 +2958,8 @@ function ChallengeFlow({
                 </strong>
 
                 <p>
-                  Make sure the screenshot clearly shows{" "}
+                  Make sure the screenshot
+                  clearly shows{" "}
                   {REQUIRED_HASHTAG}.
                 </p>
 
@@ -1784,10 +2967,6 @@ function ChallengeFlow({
 
             </div>
           )}
-
-          {/* =================================================
-              FINAL CHECK
-          ================================================= */}
 
           <div
             className="final-proof-check"
@@ -1806,12 +2985,15 @@ function ChallengeFlow({
 
               <input
                 type="checkbox"
-                checked={selfieComplete}
+                checked={
+                  selfieComplete
+                }
                 readOnly
               />
 
               <span>
-                I uploaded exactly 3 different selfie proofs.
+                I uploaded exactly 1
+                selfie proof.
               </span>
 
             </label>
@@ -1820,12 +3002,15 @@ function ChallengeFlow({
 
               <input
                 type="checkbox"
-                checked={facebookComplete}
+                checked={
+                  facebookComplete
+                }
                 readOnly
               />
 
               <span>
-                I uploaded a Facebook screenshot showing the
+                I uploaded a Facebook
+                screenshot showing the
                 required hashtag.
               </span>
 
@@ -1843,18 +3028,15 @@ function ChallengeFlow({
               />
 
               <span>
-                I understand that unclear, duplicated,
-                edited, or invalid proof may be rejected
+                I understand that unclear,
+                duplicated, edited, or
+                invalid proof may be rejected
                 during verification.
               </span>
 
             </label>
 
           </div>
-
-          {/* =================================================
-              SUBMIT
-          ================================================= */}
 
           <button
             type="button"
@@ -1863,22 +3045,24 @@ function ChallengeFlow({
               !selfieComplete ||
               !facebookComplete
             }
-            onClick={finishChallenge}
+            onClick={
+              finishChallenge
+            }
           >
             SUBMIT CHALLENGE PROOF →
           </button>
 
           {!selfieComplete && (
             <p className="locked-message">
-              🔒 Upload all 3 selfies first.
+              🔒 Upload your 1 selfie first.
             </p>
           )}
 
           {selfieComplete &&
             !facebookComplete && (
               <p className="locked-message">
-                🔒 Upload your Facebook proof screenshot
-                first.
+                🔒 Upload your Facebook proof
+                screenshot first.
               </p>
             )}
 
@@ -1908,21 +3092,29 @@ function ChallengeFlow({
           </h3>
 
           <p>
-            Your three selfie proofs and Facebook screenshot
-            have been uploaded for this session. Submitted
-            materials may still be reviewed for compliance.
+            Your selfie proof and Facebook
+            screenshot have been uploaded
+            for this session. Submitted
+            materials may still be reviewed
+            for compliance.
           </p>
 
           <button
             type="button"
             className="primary-button"
             onClick={() => {
+
               document
-                .getElementById("survey-callout")
+                .getElementById(
+                  "survey-callout"
+                )
                 ?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
+                  behavior:
+                    "smooth",
+                  block:
+                    "center",
                 });
+
             }}
           >
             CONTINUE TO SURVEY →
@@ -1964,8 +3156,12 @@ function ChallengeStep({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={onClick}
-      disabled={locked}
+      onClick={
+        onClick
+      }
+      disabled={
+        locked
+      }
     >
 
       <span className="challenge-step-number">
@@ -1999,18 +3195,26 @@ function SelfiePreview({
     useState("");
 
   useEffect(() => {
+
     if (!file) {
       return;
     }
 
     const url =
-      URL.createObjectURL(file);
+      URL.createObjectURL(
+        file
+      );
 
     setPreview(url);
 
     return () => {
-      URL.revokeObjectURL(url);
+
+      URL.revokeObjectURL(
+        url
+      );
+
     };
+
   }, [file]);
 
   return (
@@ -2019,7 +3223,9 @@ function SelfiePreview({
       {preview && (
         <img
           src={preview}
-          alt={`Selfie proof ${index + 1}`}
+          alt={`Selfie proof ${
+            index + 1
+          }`}
         />
       )}
 
@@ -2029,8 +3235,12 @@ function SelfiePreview({
 
       <button
         type="button"
-        onClick={onRemove}
-        aria-label={`Remove selfie ${index + 1}`}
+        onClick={
+          onRemove
+        }
+        aria-label={`Remove selfie ${
+          index + 1
+        }`}
       >
         ×
       </button>
@@ -2051,18 +3261,26 @@ function ProofPreview({
     useState("");
 
   useEffect(() => {
+
     if (!file) {
       return;
     }
 
     const url =
-      URL.createObjectURL(file);
+      URL.createObjectURL(
+        file
+      );
 
     setPreview(url);
 
     return () => {
-      URL.revokeObjectURL(url);
+
+      URL.revokeObjectURL(
+        url
+      );
+
     };
+
   }, [file]);
 
   return (
@@ -2099,7 +3317,9 @@ function ProofPreview({
 
         <button
           type="button"
-          onClick={onRemove}
+          onClick={
+            onRemove
+          }
         >
           REMOVE
         </button>
@@ -2141,7 +3361,9 @@ function SurveyCallout({
       <button
         type="button"
         className="primary-button"
-        onClick={onClick}
+        onClick={
+          onClick
+        }
       >
         TAKE SURVEY →
       </button>
@@ -2189,7 +3411,9 @@ function Survey({
           <button
             type="button"
             className="close-button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
           >
             ×
           </button>
@@ -2203,7 +3427,8 @@ function Survey({
           </h2>
 
           <p>
-            Please wait while we prepare the questions.
+            Please wait while we prepare
+            the questions.
           </p>
 
         </div>
@@ -2216,7 +3441,10 @@ function Survey({
      ERROR
   ======================================================= */
 
-  if (surveyError || !survey) {
+  if (
+    surveyError ||
+    !survey
+  ) {
     return (
       <div
         className="modal"
@@ -2228,7 +3456,9 @@ function Survey({
           <button
             type="button"
             className="close-button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
           >
             ×
           </button>
@@ -2242,13 +3472,16 @@ function Survey({
           </h2>
 
           <p>
-            We couldn't load the survey right now.
+            We couldn't load the survey
+            right now.
           </p>
 
           <button
             type="button"
             className="primary-button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
           >
             CLOSE
           </button>
@@ -2264,11 +3497,19 @@ function Survey({
   ======================================================= */
 
   const questions =
-    Array.isArray(survey.questions)
-      ? [...survey.questions].sort(
+    Array.isArray(
+      survey.questions
+    )
+      ? [
+          ...survey.questions,
+        ].sort(
           (a, b) =>
-            Number(a.order || 0) -
-            Number(b.order || 0)
+            Number(
+              a.order || 0
+            ) -
+            Number(
+              b.order || 0
+            )
         )
       : [];
 
@@ -2280,10 +3521,14 @@ function Survey({
     questionId,
     value
   ) => {
+
     setAnswers(
-      (previousAnswers) => ({
+      (
+        previousAnswers
+      ) => ({
         ...previousAnswers,
-        [questionId]: value,
+        [questionId]:
+          value,
       })
     );
   };
@@ -2296,62 +3541,85 @@ function Survey({
     questions
       .filter(
         (question) =>
-          question.required === true ||
-          question.required === "true"
+          question.required ===
+            true ||
+          question.required ===
+            "true"
       )
       .every(
         (question) =>
-          answers[question.id] !==
+          answers[
+            question.id
+          ] !==
             undefined &&
-          answers[question.id] !==
+          answers[
+            question.id
+          ] !==
             null &&
-          answers[question.id] !== ""
+          answers[
+            question.id
+          ] !== ""
       );
 
   /* =======================================================
-     SUBMIT ALL ANSWERS
+     SUBMIT
   ======================================================= */
 
-  const handleSubmit = async () => {
-    if (
-      !allRequiredAnswered ||
-      submitting
-    ) {
-      return;
-    }
+  const handleSubmit =
+    async () => {
 
-    setSubmitting(true);
-    setError("");
+      if (
+        !allRequiredAnswered ||
+        submitting
+      ) {
+        return;
+      }
 
-    try {
-      console.log(
-        "Submitting ALL answers:",
-        answers
+      setSubmitting(
+        true
       );
 
-      await submitSurvey({
-        surveyId: survey.id,
-        answers,
-        mode,
-      });
+      setError("");
 
-      setSubmitted(true);
+      try {
 
-    } catch (submitError) {
+        console.log(
+          "Submitting ALL answers:",
+          answers
+        );
 
-      console.error(
-        "Survey submission failed:",
+        await submitSurvey({
+          surveyId:
+            survey.id,
+          answers,
+          mode,
+        });
+
+        setSubmitted(
+          true
+        );
+
+      } catch (
         submitError
-      );
+      ) {
 
-      setError(
-        "We couldn't save your response right now. Please try again."
-      );
+        console.error(
+          "Survey submission failed:",
+          submitError
+        );
 
-    } finally {
-      setSubmitting(false);
-    }
-  };
+        setError(
+          "We couldn't save your response right now. Please try again."
+        );
+
+      } finally {
+
+        setSubmitting(
+          false
+        );
+
+      }
+    };
 
   /* =======================================================
      SUCCESS
@@ -2379,15 +3647,18 @@ function Survey({
           </h2>
 
           <p>
-            Your response has been recorded. Thank you for
-            participating in the Discover Dapitan City 
+            Your response has been recorded.
+            Thank you for participating in
+            the Discover Dapitan City
             experience.
           </p>
 
           <button
             type="button"
             className="primary-button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
           >
             CLOSE
           </button>
@@ -2413,7 +3684,9 @@ function Survey({
         <button
           type="button"
           className="close-button"
-          onClick={onClose}
+          onClick={
+            onClose
+          }
           aria-label="Close survey"
         >
           ×
@@ -2422,7 +3695,8 @@ function Survey({
         <div className="survey-scroll">
 
           <p className="section-label">
-            {survey.title || "SURVEY"}
+            {survey.title ||
+              "SURVEY"}
           </p>
 
           <h2>
@@ -2430,8 +3704,8 @@ function Survey({
           </h2>
 
           <p>
-            Answer all required questions before submitting
-            your response.
+            Answer all required questions
+            before submitting your response.
           </p>
 
           <div className="survey-progress">
@@ -2445,7 +3719,10 @@ function Survey({
           <div className="survey-questions">
 
             {questions.map(
-              (question, index) => {
+              (
+                question,
+                index
+              ) => {
 
                 const type =
                   String(
@@ -2454,11 +3731,7 @@ function Survey({
                   )
                     .toLowerCase()
                     .replace(
-                      "_",
-                      ""
-                    )
-                    .replace(
-                      "-",
+                      /[_-]/g,
                       ""
                     );
 
@@ -2478,11 +3751,14 @@ function Survey({
                   >
 
                     <div className="question-number">
-                      QUESTION {index + 1}
+                      QUESTION{" "}
+                      {index + 1}
                     </div>
 
                     <h3>
-                      {question.question}
+                      {
+                        question.question
+                      }
                     </h3>
 
                     {required && (
@@ -2491,22 +3767,36 @@ function Survey({
                       </span>
                     )}
 
-                    {/* =================================================
-                        RATING
-                    ================================================= */}
+                    {/* =======================================
+                        RATING 1–5
+                    ======================================= */}
 
-                    {type === "rating" && (
+                    {type ===
+                      "rating" && (
                       <div className="rating-options">
 
-                        {[1, 2, 3, 4, 5].map(
-                          (rating) => (
+                        {[
+                          1,
+                          2,
+                          3,
+                          4,
+                          5,
+                        ].map(
+                          (
+                            rating
+                          ) => (
+
                             <button
-                              key={rating}
+                              key={
+                                rating
+                              }
                               type="button"
                               className={
                                 answers[
-                                  question.id
-                                ] === rating
+                                  question
+                                    .id
+                                ] ===
+                                rating
                                   ? "rating-button selected"
                                   : "rating-button"
                               }
@@ -2519,48 +3809,66 @@ function Survey({
                             >
 
                               <span>
-                                {rating}
+                                {
+                                  rating
+                                }
                               </span>
 
                               <small>
-                                {rating === 1
+                                {rating ===
+                                1
                                   ? "Poor"
-                                  : rating === 2
+                                  : rating ===
+                                    2
                                   ? "Fair"
-                                  : rating === 3
+                                  : rating ===
+                                    3
                                   ? "Average"
-                                  : rating === 4
+                                  : rating ===
+                                    4
                                   ? "Good"
                                   : "Excellent"}
                               </small>
 
                             </button>
+
                           )
                         )}
 
                       </div>
                     )}
 
-                    {/* =================================================
+                    {/* =======================================
                         YES / NO
-                    ================================================= */}
+                    ======================================= */}
 
-                    {(type === "yesno" ||
-                      type === "boolean") && (
+                    {(
+                      type ===
+                        "yesno" ||
+                      type ===
+                        "boolean"
+                    ) && (
                       <div className="poll-options">
 
                         {[
                           "Yes",
                           "No",
                         ].map(
-                          (option) => (
+                          (
+                            option
+                          ) => (
+
                             <button
-                              key={option}
+                              key={
+                                option
+                              }
                               type="button"
                               className={
                                 answers[
-                                  question.id
-                                ] === option
+                                  question
+                                    .id
+                                ] ===
+                                option
                                   ? "poll-option selected"
                                   : "poll-option"
                               }
@@ -2574,43 +3882,59 @@ function Survey({
 
                               <span>
                                 {answers[
-                                  question.id
-                                ] === option
+                                  question
+                                    .id
+                                ] ===
+                                option
                                   ? "●"
                                   : "○"}
                               </span>
 
-                              {option}
+                              {
+                                option
+                              }
 
                             </button>
+
                           )
                         )}
 
                       </div>
                     )}
 
-                    {/* =================================================
+                    {/* =======================================
                         CHOICE
-                    ================================================= */}
+                    ======================================= */}
 
-                    {(type === "choice" ||
+                    {(
+                      type ===
+                        "choice" ||
                       type ===
                         "multiplechoice" ||
-                      type === "select") && (
+                      type ===
+                        "select"
+                    ) && (
                       <div className="poll-options">
 
                         {(
                           question.options ||
                           []
                         ).map(
-                          (option) => (
+                          (
+                            option
+                          ) => (
+
                             <button
-                              key={option}
+                              key={
+                                option
+                              }
                               type="button"
                               className={
                                 answers[
-                                  question.id
-                                ] === option
+                                  question
+                                    .id
+                                ] ===
+                                option
                                   ? "poll-option selected"
                                   : "poll-option"
                               }
@@ -2624,33 +3948,44 @@ function Survey({
 
                               <span>
                                 {answers[
-                                  question.id
-                                ] === option
+                                  question
+                                    .id
+                                ] ===
+                                option
                                   ? "●"
                                   : "○"}
                               </span>
 
-                              {option}
+                              {
+                                option
+                              }
 
                             </button>
+
                           )
                         )}
 
                       </div>
                     )}
 
-                    {/* =================================================
+                    {/* =======================================
                         TEXT
-                    ================================================= */}
+                    ======================================= */}
 
-                    {(type === "text" ||
-                      type === "textarea" ||
-                      type === "shorttext") && (
+                    {(
+                      type ===
+                        "text" ||
+                      type ===
+                        "textarea" ||
+                      type ===
+                        "shorttext"
+                    ) && (
                       <textarea
                         className="survey-textarea"
                         value={
                           answers[
-                            question.id
+                            question
+                              .id
                           ] || ""
                         }
                         onChange={(
@@ -2658,7 +3993,9 @@ function Survey({
                         ) =>
                           handleAnswer(
                             question.id,
-                            event.target.value
+                            event
+                              .target
+                              .value
                           )
                         }
                         placeholder="Type your answer..."
@@ -2679,8 +4016,16 @@ function Survey({
 
           <div className="survey-answer-status">
 
-            {Object.keys(answers).length} of{" "}
-            {questions.length} answered
+            {
+              Object.keys(
+                answers
+              ).length
+            }{" "}
+            of{" "}
+            {
+              questions.length
+            }{" "}
+            answered
 
           </div>
 
@@ -2704,9 +4049,12 @@ function Survey({
             disabled={
               !allRequiredAnswered ||
               submitting ||
-              questions.length === 0
+              questions.length ===
+                0
             }
-            onClick={handleSubmit}
+            onClick={
+              handleSubmit
+            }
           >
             {submitting
               ? "SUBMITTING..."
