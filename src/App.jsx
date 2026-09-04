@@ -885,12 +885,50 @@ function ExperiencePage({
               </video>
 
             </div>
-
           </div>
 
         </section>
       )}
+{/* =================================================
+    ABOUT DAPITAN CITY
+================================================= */}
 
+<section className="content-section about-dapitan-section">
+
+  <p className="section-label">
+    ABOUT DAPITAN CITY
+  </p>
+
+  <h2>
+    The Shrine City
+    <br />
+    of the Philippines
+  </h2>
+
+  <p className="large-text">
+    Dapitan City, officially the City of Dapitan
+    (Cebuano: Dakbayan/Bagbenwa sa Dapitan;
+    Filipino: Lungsod ng Dapitan), is a component
+    city in the province of Zamboanga del Norte,
+    Philippines.
+  </p>
+
+  <p>
+    Dapitan is historically significant as the place
+    where José Rizal, the Philippines' national hero,
+    was exiled by the Spanish colonial authorities.
+    During his exile, Rizal lived and worked in Dapitan,
+    leaving an important legacy that remains part of
+    the city's cultural and historical identity.
+  </p>
+
+  <p>
+    Because of its deep connection to Rizal and its
+    preserved historical heritage, Dapitan is widely
+    known as the "Shrine City of the Philippines."
+  </p>
+
+</section>
       {/* =================================================
           DESTINATION SELECTION
       ================================================= */}
