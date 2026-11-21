@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import "./CassavaShowcase.css";
 
 import { getSurvey } from "./firebase/surveys";
 import { submitSurvey } from "./firebase/responses";
@@ -938,23 +939,13 @@ function ExperiencePage({
         id="destination-selection"
       >
 
-        <p className="section-label">
-          {mode === "online"
-            ? "DISCOVER DAPITAN"
-            : "HERITAGE TRAIL"}
-        </p>
+        <CassavaShowcase />
 
-        <h2>
-          Choose Your
-          <br />
-          Destination
-        </h2>
-
-        <p className="large-text">
-          Select exactly one destination below.
-          Your chosen destination becomes the
-          location for your one-selfie challenge.
-        </p>
+        <div className="cassava-destination-intro">
+          <p className="section-label">DISCOVER DAPITAN · EXPLORE THE CITY</p>
+          <h2>Discover the Taste of Dapitan<br />with Locally Made Cassava Chips</h2>
+          <p className="large-text">A Crunch of Local Pride. Select exactly one destination below.</p>
+        </div>
 
         <DestinationSelector
           selectedDestination={
@@ -1144,6 +1135,126 @@ function ExperiencePage({
       )}
 
     </main>
+  );
+}
+
+/* =========================================================
+   CASSAVA CHIPS PRODUCT SHOWCASE
+   Self-contained promotional feature; no Firebase changes.
+========================================================= */
+
+const CASSAVA_PROCESS = [
+  { title: "Selection of Cassava", detail: "Choose fresh, good-quality cassava roots to ensure the chips have good texture and taste.", label: "THE BEGINNING", visual: "01" },
+  { title: "Peeling and Washing", detail: "Remove the brown outer skin and the inner peel, then wash the cassava thoroughly.", label: "FRESHLY PREPARED", visual: "02" },
+  { title: "Slicing", detail: "Slice the cassava into thin and even pieces to help them cook uniformly.", label: "PRECISION IN EVERY SLICE", visual: "03" },
+  { title: "Proper Preparation", detail: "Prepare the slices through an appropriate soaking or blanching process to help ensure safe processing.", label: "PREPARED WITH CARE", visual: "04" },
+  { title: "Seasoning", detail: "Add seasonings such as salt, cheese powder, barbecue flavor, or other desired flavors.", label: "A TOUCH OF FLAVOR", visual: "05" },
+  { title: "Cooking", detail: "Fry or bake the cassava slices until they become golden and crispy.", label: "GOLDEN & CRISPY", visual: "06" },
+  { title: "Cooling", detail: "Allow the cooked chips to cool before packaging to maintain their crispiness.", label: "THE PERFECT CRUNCH", visual: "07" },
+  { title: "Packaging", detail: "Place the cassava chips in clean, food-grade, moisture-resistant packaging to preserve their quality and freshness.", label: "READY TO ENJOY", visual: "08" },  {
+    title: "Background of CAGAPA",
+    detail: "The Cassava Growers and Processors Association (CAGAPA), also known as Zamboanga del Norte Cassava Growers and Processors Association, Inc. (ZN-CAGAPA, Inc.), was established on June 9, 2014, in Barangay Aseniero, Dapitan City, Zamboanga del Norte. Founded by 14 farmers, housewives, and unemployed individuals, it developed cassava processing into a community livelihood enterprise with support from local government and other agencies.",
+    label: "OUR COMMUNITY ROOTS",
+    visual: "09",
+  },
+  {
+    title: "Cassava as a Food Souvenir",
+    detail: "Cassava chips can be a memorable souvenir for tourists. They represent Dapitan City's local food products and allow visitors to share a piece of the city's culture with family and friends.",
+    label: "A TASTE TO TAKE HOME",
+    visual: "10",
+  },
+];
+
+function CassavaShowcase() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState(0);
+  const closeButtonRef = useRef(null);
+  const triggerRef = useRef(null);
+  const current = CASSAVA_PROCESS[step];
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setIsOpen(false);
+      if (event.key === "ArrowRight") setStep((value) => Math.min(value + 1, CASSAVA_PROCESS.length - 1));
+      if (event.key === "ArrowLeft") setStep((value) => Math.max(value - 1, 0));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [isOpen]);
+
+  return (
+    <section className="cassava-showcase" aria-label="Dapitan cassava chips product feature">
+      <div className="cassava-showcase-heading">
+        <span className="cassava-eyebrow">LOCALLY CRAFTED · DAPITAN CITY</span>
+        <h3>From local roots to <em>golden crunch.</em></h3>
+        <p>Discover the story behind every crispy bite. Explore eight production steps, the people behind CAGAPA, and a local souvenir worth sharing.</p>
+      </div>
+
+      <button
+        ref={triggerRef}
+        type="button"
+        className="cassava-feature"
+        onClick={() => { setStep(0); setIsOpen(true); }}
+        aria-label="Explore the ten-part cassava chips story"
+      >
+        <div className="cassava-feature-image">
+          <img src="/cassava-product.png" alt="Dapitan's locally made original flavor cassava chips displayed with cassava roots and a bowl of chips" loading="lazy" />
+          <span className="cassava-image-stamp">MADE IN<br />DAPITAN</span>
+        </div>
+        <div className="cassava-feature-content">
+          <span className="cassava-eyebrow">THE CASSAVA STORY / 01—10</span>
+          <span className="cassava-feature-title">A little taste of <em>Dapitan.</em></span>
+          <span className="cassava-feature-copy">Simple ingredients. Thoughtful preparation. A delicious local favorite worth discovering.</span>
+          <span className="cassava-feature-action">EXPLORE HOW IT'S MADE <span aria-hidden="true">↗</span></span>
+          <span className="cassava-feature-footnote">INTERACTIVE EXPERIENCE · CLICK TO DISCOVER</span>
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="cassava-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsOpen(false); }}>
+          <div className="cassava-tablet" role="dialog" aria-modal="true" aria-label="Dapitan cassava chips story">
+            <div className="cassava-tablet-top">
+              <span className="cassava-tablet-brand">DAPITAN'S <strong>CASSAVA CHIPS</strong></span>
+              <span className="cassava-tablet-center">THE MAKING OF A LOCAL FAVORITE</span>
+              <button ref={closeButtonRef} className="cassava-modal-close" type="button" onClick={() => setIsOpen(false)} aria-label="Close product experience">×</button>
+            </div>
+            <div className="cassava-tablet-body">
+              <div className="cassava-tablet-visual">
+                <img src="/cassava-product.png" alt="Packaged Dapitan cassava chips with fresh cassava and chips" />
+                <span className="cassava-visual-caption">CRAFTED WITH CARE · DAPITAN, PHILIPPINES</span>
+                <span className="cassava-visual-number" aria-hidden="true">{current.visual}</span>
+              </div>
+              <div className="cassava-tablet-info" key={step}>
+                <span className="cassava-eyebrow">{current.label}</span>
+                <div className="cassava-step-count">STEP {String(step + 1).padStart(2, "0")} <span>/ {String(CASSAVA_PROCESS.length).padStart(2, "0")}</span></div>
+                <h3>{current.title}</h3>
+                <p>{current.detail || current.description}</p>
+                <div className="cassava-progress" aria-label={`Step ${step + 1} of ${CASSAVA_PROCESS.length}`}>
+                  {CASSAVA_PROCESS.map((item, index) => (
+                    <button key={item.visual} type="button" className={index === step ? "active" : ""} onClick={() => setStep(index)} aria-label={`Go to step ${index + 1}: ${item.title}`} aria-current={index === step ? "step" : undefined} />
+                  ))}
+                </div>
+                <div className="cassava-modal-navigation">
+                  <button type="button" onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}>← PREVIOUS</button>
+                  <button type="button" className="cassava-next" onClick={() => { if (step === CASSAVA_PROCESS.length - 1) setIsOpen(false); else setStep((value) => value + 1); }}>
+                    {step === CASSAVA_PROCESS.length - 1 ? "FINISH EXPERIENCE ✓" : "NEXT STEP →"}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="cassava-tablet-bottom"><span>DISCOVER DAPITAN</span><span>ROOTED IN LOCAL PRIDE</span></div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
