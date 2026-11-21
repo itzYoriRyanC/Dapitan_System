@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
@@ -39,6 +40,10 @@ export default defineConfig({
       },
 
       workbox: {
+        // Allow larger assets such as cassava-product.png
+        // to be included in the PWA precache.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+
         globPatterns: [
           "**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp,woff2}",
         ],
