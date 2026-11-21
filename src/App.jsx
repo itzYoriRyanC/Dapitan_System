@@ -500,22 +500,7 @@ function App() {
 
             <div className="mechanic">
 
-              <span>
-                05
-              </span>
-
-              <div>
-
-                <strong>
-                  Complete Survey
-                </strong>
-
-                <p>
-                  Once the challenge is completed,
-                  continue to the tourism survey.
-                </p>
-
-              </div>
+              
 
             </div>
 
@@ -1151,7 +1136,18 @@ const CASSAVA_PROCESS = [
   { title: "Seasoning", detail: "Add seasonings such as salt, cheese powder, barbecue flavor, or other desired flavors.", label: "A TOUCH OF FLAVOR", visual: "05" },
   { title: "Cooking", detail: "Fry or bake the cassava slices until they become golden and crispy.", label: "GOLDEN & CRISPY", visual: "06" },
   { title: "Cooling", detail: "Allow the cooked chips to cool before packaging to maintain their crispiness.", label: "THE PERFECT CRUNCH", visual: "07" },
-  { title: "Packaging", detail: "Place the cassava chips in clean, food-grade, moisture-resistant packaging to preserve their quality and freshness.", label: "READY TO ENJOY", visual: "08" },  {
+  { title: "Packaging", detail: "Place the cassava chips in clean, food-grade, moisture-resistant packaging to preserve their quality and freshness.", label: "READY TO ENJOY", visual: "08" },
+  {
+  title: "Benefits of Cassava Chips",
+  eyebrow: "MORE THAN A LOCAL SNACK",
+  detail:
+    "Cassava chips provide carbohydrates for energy and are made " +
+    "from naturally gluten-free cassava. They are also a convenient " +
+    "food souvenir that tourists can bring home and share. " +
+    "Choosing locally produced cassava chips supports local " +
+    "farmers, processors, and livelihood opportunities in Dapitan City."
+},
+  {
     title: "Background of CAGAPA",
     detail: "The Cassava Growers and Processors Association (CAGAPA), also known as Zamboanga del Norte Cassava Growers and Processors Association, Inc. (ZN-CAGAPA, Inc.), was established on June 9, 2014, in Barangay Aseniero, Dapitan City, Zamboanga del Norte. Founded by 14 farmers, housewives, and unemployed individuals, it developed cassava processing into a community livelihood enterprise with support from local government and other agencies.",
     label: "OUR COMMUNITY ROOTS",
