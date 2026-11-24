@@ -1140,12 +1140,21 @@ const CASSAVA_PROCESS = [
   {
   title: "Benefits of Cassava Chips",
   eyebrow: "MORE THAN A LOCAL SNACK",
-  detail:
-    "Cassava chips provide carbohydrates for energy and are made " +
-    "from naturally gluten-free cassava. They are also a convenient " +
-    "food souvenir that tourists can bring home and share. " +
-    "Choosing locally produced cassava chips supports local " +
-    "farmers, processors, and livelihood opportunities in Dapitan City."
+  
+detail:
+    "Cassava provides energy because it is rich in carbohydrates, " +
+    "which serve as the body's primary source of energy. It also " +
+    "supports digestive health because it contains dietary fiber " +
+    "that helps promote healthy digestion and bowel movement. " +
+    "Additionally, cassava provides essential minerals such as " +
+    "potassium, magnesium, and calcium that contribute to normal " +
+    "body functions. Since cassava does not naturally contain " +
+    "gluten, it serves as an alternative carbohydrate source for " +
+    "people who need to avoid gluten. Its carbohydrates and " +
+    "minerals help the body perform everyday activities, while " +
+    "its dietary fiber supports digestive health and contributes " +
+    "to feelings of fullness.",
+
 },
   {
     title: "Background of CAGAPA",
